@@ -1,0 +1,60 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y git zip unzip openjdk-17-jdk python3-pip python3-dev build-essential libssl-dev libffi-dev autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev cmake
+
+      - name: Install Buildozer
+        run: |
+          pip install --upgrade buildozer cython
+
+      - name: Create spec
+        run: |
+          cat > buildozer.spec << 'EOF'
+          [app]
+          title = Standoff 2 Private
+          package.name = standoff2private
+          package.domain = org.standoff
+          version = 2.0
+          source.dir = .
+          source.include_exts = py,png,jpg,ttf,db
+          requirements = python3,kivy
+          orientation = portrait
+          fullscreen = 1
+          android.api = 34
+          android.minapi = 21
+          android.permissions = INTERNET
+          android.arch = arm64-v8a
+          android.accept_sdk_license = True
+
+          [buildozer]
+          log_level = 2
+          EOF
+
+      - name: Build APK
+        run: |
+          buildozer android clean
+          buildozer -v android debug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: standoff-apk
+          path: bin/*.apk
